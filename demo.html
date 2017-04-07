@@ -1,0 +1,230 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+    <meta charset="utf-8" />
+    <script src="js/jquery.min.js"></script>
+    <script src="js/echarts.js"></script>
+</head>
+<body>
+<div id="main" style="width: 1000px; height: 500px"></div>
+<a href="javascript:void(0)" id="moveLeft">Left</a>
+<a href="javascript:void(0)" id="moveRight">Right</a>
+<a href="javascript:void(0)" id="Jump">Jump</a>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+        var leftWalk = ['image://res/L1.png', 'image://res/L2.png'];
+        var rightWalk = ['image://res/R1.png', 'image://res/R2.png'];
+        var stand = 'image://res/S.png';
+        myChart.setOption({
+            title: {
+                text: '异步数据加载示例'
+            },
+            tooltip: {},
+            /*
+            legend: {
+                data: ['销量']
+            },*/
+            xAxis: {
+                type: 'value',
+                min: -100, //'minValue',
+                max: 100, //'maxValue',
+                splitLine: {
+                    show: true
+                }
+            },
+            yAxis: {
+                type: 'value',
+                min: 0, //'minValue',
+                max: 200, //'maxValue',
+                splitLine: {
+                    show: true
+                }
+            },
+            series: [
+                {
+                    name: '1',
+                    type: 'line', //'scatter',
+                    data: [0, 0],
+                    symbolSize: function(val) {
+                        return 50;
+                    },
+                    symbol: stand,
+                    animation: false
+                }
+                /*,
+                {
+                    name: '2',
+                    type: 'scatter',
+                    data: [[1.0, 1.0, 30]],
+                    itemStyle: {
+                        normal: {
+                            opacity: 0.8
+                        }
+                    },
+                    symbolSize: function (val) {
+                        return val[2];
+                    }
+                }*/
+            ]
+        });
+        var min = -Math.PI;
+        var max = Math.PI;
+        var step = Math.PI / 80;
+        var cur = min;
+        var fps = 30;
+        var dir = 1;
+        var data = [];
+
+        var tx = 0;
+        var ty = 0;
+        var xmin = -100;
+        var xmax = 100;
+        var isJumping = false;
+        var jumpValue = 0;
+        var jumpTime = 0;
+        var jumpPower = 15;
+        var legSeq = true;
+        function jump() {
+            if (20 >= jumpTime * 3) {
+                jumpValue += jumpPower - jumpTime * 2;
+                
+            } else {
+                jumpValue += jumpPower - jumpTime * 5;
+            }
+            jumpTime++;
+            return jumpValue;
+        }
+
+        function startJump() {
+            if (isJumping) {
+                return;
+            }
+            isJumping = true;
+            jumpTime = 0;
+            jumpValue = 0;
+            var jumping = setInterval(function () {
+                tx += dir;
+                if (dir === -1 && tx <= xmin) {
+                    dir = 1;
+                } else if(dir === 1 && tx >= xmax) {
+                    dir = -1;
+                }
+                /*
+                t += fps;
+                var add = 0;
+                add = t / 10000;
+                if (dir === 1) {
+                    cur += step;
+                    if (cur > max) {
+                        dir = -1;
+                    }
+                   
+                } else {
+                    cur -= step;
+                    if (cur < min) {
+                        dir = 1;
+                    }
+                }
+                var x = cur * Math.sin(cur) * Math.cos(add); //* dir;
+                var y = cur * Math.cos(cur) * Math.sin(add); //* dir;
+                //var x = Math.sin(cur);
+                //var y = Math.cos(cur) * dir + add + x * Math.cos(cur) * (-dir);
+                //x += Math.sin(add) + Math.cos(y);
+                //y -= Math.sin(add) + Math.cos(x);
+                //var x1 = Math.cos(y);
+                //var y1 = Math.cos(x);
+                //x = x1;
+                //y = y1;
+                */
+                var x = 0;
+                var y = 0;
+                var isStop = false;
+                if (!isJumping) {
+                    x = tx;
+                    y = 0;
+                } else {
+                    x = tx;
+                    y = jump(jumpTime);
+                    if (jumpTime > 0 && y <= 0) {
+                        isStop = true;
+                        y = 0;
+                        isJumping = false;
+                        clearInterval(jumping);
+                        stopJump();
+                    }
+                }
+                data[0] = [x, y];
+                //data.push([x, y]);
+                /*
+                if (data.length >= 50) {
+                    data.shift();
+                } 
+                */
+                // var data = [[x, y, 20]];
+                
+                myChart.setOption({
+                    series: [{
+                        name: '1',
+                        data: data,
+                        //symbol: 'image://res/jump.png'
+                        symbolRotate: isStop ? 0 : -jumpTime * 20 * dir
+                    }]
+                });
+            }, fps);
+        }
+
+        function stopJump() {
+            isJumping = false;
+            myChart.setOption({
+                series: [{
+                    name: '1',
+                    //symbol: 'image://res/S.png',
+                    symbolRotate: 0
+                }]
+            });
+        }
+
+        
+        var walkSeq = 0;
+        function GetWalkImg() {
+            var arr = dir > 0 ? rightWalk : leftWalk;
+            walkSeq++;
+            if (walkSeq >= arr.length) {
+                walkSeq = 0;
+            }
+            return arr[walkSeq];
+        }
+        $(function() {
+            $("#Jump").click(function() {
+                startJump();
+            });
+            $("#moveLeft").click(function () {
+                dir = -1;
+                data[0] = [--tx, ty];
+                myChart.setOption({
+                    series: [{
+                        name: '1',
+                        data: data,
+                        symbol: GetWalkImg()
+                    }]
+                });
+
+            });
+            $("#moveRight").click(function () {
+                dir = 1;
+                data[0] = [++tx, ty];
+                myChart.setOption({
+                    series: [{
+                        name: '1',
+                        data: data,
+                        symbol: GetWalkImg()
+                    }]
+                });
+            });
+        });
+    </script>
+</body>
+</html>
